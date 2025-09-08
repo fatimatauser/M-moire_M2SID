@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # Configuration de la page pour un design large et thème personnalisé
 st.set_page_config(
-    page_title="USAD Drépanocytose Analyzer",
+    page_title="Analyse de la Drépanocytose",
     page_icon="🩺",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -141,7 +141,7 @@ except:
     logging.error("Modèles ou scaler non trouvés.")
     model, scaler, kmeans = None, None, None
 
-# Variables utilisées pour la prédiction (tirées de selection variable.ipynb)
+# Variables utilisées pour la prédiction 
 variables_selection = [
     'Âge de début des signes (en mois)', 'NiveauUrgence', 'GR (/mm3)', 'GB (/mm3)',
     "Nbre d'hospitalisations avant 2017", 'CRP Si positive (Valeur)', 'Pâleur',
@@ -157,7 +157,7 @@ variables_selection = [
     'HDJ', 'Nbre de transfusion Entre 2017 et 2023'
 ]
 
-# Variables pour clustering (tirées de segmentation.ipynb)
+# Variables pour clustering
 variables_clustering = [
     'Âge de début des signes (en mois)', 'Taux d\'Hb (g/dL)', '% d\'Hb F', 'Nbre de GB (/mm3)',
     'Nbre de PLT (/mm3)', 'Âge de découverte de la drépanocytose (en mois)'

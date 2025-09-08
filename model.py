@@ -48,7 +48,7 @@ def categoriser_diagnostic(diag):
         return 'Autres'
 
 # Vérifier l'existence du fichier
-data_path = "C:/Users/FATIMATA/Desktop/M2SID/Mémoire/application/urgences_drepanocytaires_2023.xlsx"
+data_path = "C:/Users/FATIMATA/Desktop/M2SID/Mémoire/application/fichier_nettoye.xlsx"
 if not os.path.exists(data_path):
     logging.error(f"Le fichier {data_path} n'existe pas.")
     raise FileNotFoundError(f"Le fichier {data_path} n'existe pas.")

@@ -48,7 +48,7 @@ def categoriser_diagnostic(diag):
 
 # Chargement des données
 try:
-    df = pd.read_excel("C:/Users/FATIMATA/Desktop/M2SID/Mémoire/Base_de_données_USAD_URGENCES_1.xlsx", sheet_name=None)
+    df = pd.read_excel("C:/Users/FATIMATA/Desktop/M2SID/Mémoire/urgences_drepanocytaires_2023.xlsx", sheet_name=None)
     data = pd.concat(df.values(), ignore_index=True)
     logging.info(f"Données chargées : {data.shape[0]} lignes, {data.shape[1]} colonnes")
 except Exception as e:

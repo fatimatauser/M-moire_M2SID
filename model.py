@@ -8,12 +8,13 @@ import joblib
 import re
 import logging
 import warnings
+import os
 
 # Configuration des avertissements et logging
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Fonctions utilitaires (tirées de vos notebooks)
+# Fonctions utilitaires
 def nettoyer_diagnostic(diag):
     if not isinstance(diag, str):
         return diag
@@ -46,16 +47,25 @@ def categoriser_diagnostic(diag):
     else:
         return 'Autres'
 
+# Vérifier l'existence du fichier
+data_path = "C:/Users/FATIMATA/Desktop/M2SID/Mémoire/application/urgences_drepanocytaires_2023.xlsx"
+if not os.path.exists(data_path):
+    logging.error(f"Le fichier {data_path} n'existe pas.")
+    raise FileNotFoundError(f"Le fichier {data_path} n'existe pas.")
+
 # Chargement des données
 try:
-    df = pd.read_excel("C:/Users/FATIMATA/Desktop/M2SID/Mémoire/urgences_drepanocytaires_2023.xlsx", sheet_name=None)
+    df = pd.read_excel(data_path, sheet_name=None, engine='openpyxl')
     data = pd.concat(df.values(), ignore_index=True)
     logging.info(f"Données chargées : {data.shape[0]} lignes, {data.shape[1]} colonnes")
 except Exception as e:
     logging.error(f"Erreur lors du chargement des données : {e}")
     raise
 
-# Variables pour la prédiction 
+# Afficher les colonnes disponibles pour diagnostic
+logging.info(f"Colonnes disponibles dans le fichier : {data.columns.tolist()}")
+
+# Variables pour la prédiction
 variables_selection = [
     'Âge de début des signes (en mois)', 'NiveauUrgence', 'GR (/mm3)', 'GB (/mm3)',
     "Nbre d'hospitalisations avant 2017", 'CRP Si positive (Valeur)', 'Pâleur',
@@ -71,17 +81,26 @@ variables_selection = [
     'HDJ', 'Nbre de transfusion Entre 2017 et 2023'
 ]
 
-# Variables pour le clustering 
+# Variables pour le clustering
 variables_clustering = [
-    'Âge de début des signes (en mois)', 'Taux d\'Hb (g/dL)', '% d\'Hb F', 'Nbre de GB (/mm3)',
+    'Âge de début des signes (en mois)', "Taux d'Hb (g/dL)", '% d\'Hb F', 'Nbre de GB (/mm3)',
     'Nbre de PLT (/mm3)', 'Âge de découverte de la drépanocytose (en mois)'
 ]
+
+# Vérifier les colonnes disponibles
+available_columns = data.columns.tolist()
+variables_selection = [col for col in variables_selection if col in available_columns]
+variables_clustering = [col for col in variables_clustering if col in available_columns]
+logging.info(f"Colonnes utilisées pour la prédiction avant prétraitement : {variables_selection}")
+logging.info(f"Colonnes utilisées pour le clustering : {variables_clustering}")
 
 # Prétraitement des données
 # Nettoyage des diagnostics
 if 'Diagnostic' in data.columns:
     data['Diagnostic'] = data['Diagnostic'].apply(nettoyer_diagnostic)
     data['Diagnostic Catégorisé'] = data['Diagnostic'].apply(categoriser_diagnostic)
+else:
+    logging.warning("La colonne 'Diagnostic' est absente. 'Diagnostic Catégorisé' ne sera pas généré.")
 
 # Conversion des variables Oui/Non en binaire
 binary_columns = [
@@ -100,37 +119,47 @@ if 'NiveauUrgence' in data.columns:
         'Urgence1': 1, 'Urgence2': 2, 'Urgence3': 3, 'Urgence4': 4, 'Urgence5': 5, 'Urgence6': 6
     })
 
-if 'Niveau d\'instruction scolarité' in data.columns:
-    data['Niveau d\'instruction scolarité'] = data['Niveau d\'instruction scolarité'].map({
+if "Niveau d'instruction scolarité" in data.columns:
+    data["Niveau d'instruction scolarité"] = data["Niveau d'instruction scolarité"].map({
         'Maternelle': 1, 'Elémentaire': 2, 'Secondaire': 3, 'Enseignement Supérieur': 4, 'NON': 0
     })
 
 # One-hot encoding pour Diagnostic Catégorisé et Mois
 if 'Diagnostic Catégorisé' in data.columns:
     data = pd.get_dummies(data, columns=['Diagnostic Catégorisé'], prefix='Diagnostic Catégorisé')
+    # Mettre à jour variables_selection avec les colonnes encodées
+    variables_selection = [col for col in variables_selection if col != 'Diagnostic Catégorisé'] + \
+                          [col for col in data.columns if col.startswith('Diagnostic Catégorisé_')]
 if 'Mois' in data.columns:
     data = pd.get_dummies(data, columns=['Mois'], prefix='Mois')
+    # Mettre à jour variables_selection avec les colonnes encodées
+    variables_selection = [col for col in variables_selection if col != 'Mois'] + \
+                          [col for col in data.columns if col.startswith('Mois_')]
+
+logging.info(f"Colonnes utilisées pour la prédiction après one-hot encoding : {variables_selection}")
 
 # Supprimer les lignes avec des valeurs manquantes pour les variables de prédiction
 data_pred = data[variables_selection].dropna()
 
-# Préparer les features et la cible 
+# Préparer les features et la cible
 if 'Evolution' in data.columns:
-    X = data_pred.drop(columns=['Evolution'])
-    y = data_pred['Evolution'].map({'Favorable': 0, 'Complications': 1})
+    X = data_pred
+    y = data['Evolution'].loc[data_pred.index].map({'Favorable': 0, 'Complications': 1})
 else:
     logging.error("La colonne 'Evolution' est manquante. Veuillez spécifier la colonne cible.")
     raise ValueError("Colonne 'Evolution' manquante")
 
 # Standardisation des variables quantitatives
 quantitative_vars = [
-    'Âge de début des signes (en mois)', 'GR (/mm3)', 'GB (/mm3)',
-    'Âge du debut d etude en mois (en janvier 2023)', 'VGM (fl/u3)',
-    'HB (g/dl)', 'Nbre de GB (/mm3)', 'PLT (/mm3)', 'Nbre de PLT (/mm3)',
-    'TCMH (g/dl)', "Nbre d'hospitalisations avant 2017",
-    "Nbre d'hospitalisations entre 2017 et 2023",
-    'Nbre de transfusion avant 2017', 'Nbre de transfusion Entre 2017 et 2023',
-    'CRP Si positive (Valeur)', "Taux d'Hb (g/dL)", "% d'Hb S", '% d\'Hb F'
+    col for col in [
+        'Âge de début des signes (en mois)', 'GR (/mm3)', 'GB (/mm3)',
+        'Âge du debut d etude en mois (en janvier 2023)', 'VGM (fl/u3)',
+        'HB (g/dl)', 'Nbre de GB (/mm3)', 'PLT (/mm3)', 'Nbre de PLT (/mm3)',
+        'TCMH (g/dl)', "Nbre d'hospitalisations avant 2017",
+        "Nbre d'hospitalisations entre 2017 et 2023",
+        'Nbre de transfusion avant 2017', 'Nbre de transfusion Entre 2017 et 2023',
+        'CRP Si positive (Valeur)', "Taux d'Hb (g/dL)", "% d'Hb S", '% d\'Hb F'
+    ] if col in X.columns
 ]
 scaler = StandardScaler()
 X[quantitative_vars] = scaler.fit_transform(X[quantitative_vars])
@@ -160,7 +189,7 @@ logging.info("Modèle LightGBM sauvegardé dans lightgbm_model.txt")
 # Entraînement du modèle K-Means pour la segmentation
 X_cluster = data[variables_clustering].dropna()
 X_cluster_scaled = scaler.transform(X_cluster)
-kmeans = KMeans(n_clusters=3, random_state=42)  
+kmeans = KMeans(n_clusters=3, random_state=42)
 kmeans.fit(X_cluster_scaled)
 joblib.dump(kmeans, 'kmeans_model.pkl')
 logging.info("Modèle K-Means sauvegardé dans kmeans_model.pkl")

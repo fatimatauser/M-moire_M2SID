@@ -315,7 +315,7 @@ elif page == "À Propos":
         **Test pour USAD :** Déployé via GitHub/Streamlit Cloud.  
         **Version :** 1.1 | **Date :** Septembre 2025
         """)
-        st.info("📧 Pour toute question, contactez nous
+        st.info("Pour toute question, contactez nous !")
 
 # Pied de page
 st.markdown("---")

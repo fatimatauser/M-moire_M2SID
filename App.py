@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -371,4 +370,3 @@ elif main_section == "ℹ️ À Propos":
 # Pied de page
 st.markdown("---")
 st.markdown("<p style='text-align: center; color: #666;'>Application USAD v1.2 | Septembre 2025 | Développée pour l'USAD Sénégal</p>", unsafe_allow_html=True)
-```

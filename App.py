@@ -160,8 +160,6 @@ page = st.sidebar.radio(
 with st.container():
     st.markdown("<h1 style='text-align: center; color: #003087;'>USAD - Prédiction des Urgences Drépanocytaires</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: #666;'>Application pour l'analyse et la prédiction des crises drépanocytaires</h3>", unsafe_allow_html=True)
-    # Placeholder pour une icône de la drépanocytose (libre de droits)
-    st.image("https://www.vecteezy.com/free-vector/sickle-cell", caption="Icône Drépanocytose (Vecteezy)", width=150)
 
 if page == "🏠 Accueil":
     with st.container():

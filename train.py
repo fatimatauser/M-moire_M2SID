@@ -7,11 +7,13 @@ from imblearn.combine import SMOTETomek
 from sklearn.ensemble import RandomForestClassifier
 import joblib
 
+# Désactiver les avertissements de dépréciation
+pd.set_option('future.no_silent_downcasting', True)
+
 # ================================
 # Chargement des données
 # ================================
-# Mettez à jour ce chemin avec l'emplacement exact de votre fichier
-df = pd.read_excel(r"fichier_nettoye.xlsx")  
+df = pd.read_excel(r"C:\Users\FATIMATA\Desktop\M2SID\Mémoire\application\fichier_nettoye.xlsx")
 
 # ================================
 # Variables sélectionnées
@@ -30,21 +32,6 @@ variables_selection = [
     'Douleur provoquée (Os.Abdomen)', 'Mois', 'Vaccin contre pneumocoque',
     'HDJ', 'Nbre de transfusion Entre 2017 et 2023', 'Evolution'
 ]
-# Gestion des colonnes manquantes
-for col in variables_selection:
-    if col not in df.columns:
-        df[col] = 0 if col in ['Pâleur', 'Souffle systolique fonctionnel', 'Vaccin contre méningocoque',
-                               'Splénomégalie', 'Prophylaxie à la pénicilline', 'Parents Salariés',
-                               'Prise en charge Hospitalisation', 'Radiographie du thorax Oui ou Non',
-                               'Douleur provoquée (Os.Abdomen)', 'Vaccin contre pneumocoque'] \
-                  else np.nan if col in ['Âge de début des signes (en mois)', 'GR (/mm3)', 'GB (/mm3)',
-                                         'Âge du debut d etude en mois (en janvier 2023)', 'VGM (fl/u3)',
-                                         'HB (g/dl)', 'Nbre de GB (/mm3)', 'PLT (/mm3)', 'Nbre de PLT (/mm3)',
-                                         'TCMH (g/dl)', "Nbre d'hospitalisations avant 2017",
-                                         "Nbre d'hospitalisations entre 2017 et 2023",
-                                         'Nbre de transfusion avant 2017', 'Nbre de transfusion Entre 2017 et 2023',
-                                         'CRP Si positive (Valeur)', "Taux d'Hb (g/dL)", "% d'Hb S", "% d'Hb F"] \
-                  else 'NON'
 df_selected = df[variables_selection].copy()
 
 # ================================
@@ -74,7 +61,7 @@ df_selected.replace(ordinal_mappings, inplace=True)
 df_selected = pd.get_dummies(df_selected, columns=['Diagnostic Catégorisé', 'Mois'], drop_first=True)
 
 # ================================
-# Standardisation
+# Nettoyage et standardisation des variables quantitatives
 # ================================
 quantitative_vars = [
     'Âge de début des signes (en mois)', 'GR (/mm3)', 'GB (/mm3)',
@@ -85,6 +72,13 @@ quantitative_vars = [
     'Nbre de transfusion avant 2017', 'Nbre de transfusion Entre 2017 et 2023',
     'CRP Si positive (Valeur)', "Taux d'Hb (g/dL)", "% d'Hb S", "% d'Hb F"
 ]
+
+# Nettoyage : supprimer espaces, remplacer virgules par points, et convertir en float
+for var in quantitative_vars:
+    if var in df_selected.columns:
+        df_selected[var] = df_selected[var].astype(str).str.replace(' ', '').str.replace(',', '.').astype(float)
+
+# Standardisation
 scaler = StandardScaler()
 df_selected[quantitative_vars] = scaler.fit_transform(df_selected[quantitative_vars])
 
@@ -132,11 +126,8 @@ print(f"Seuil optimal : {optimal_threshold}")
 # ================================
 # Sauvegarde du modèle, scaler et features
 # ================================
-joblib.dump(rf_model, r"C:\Users\FATIMATA\usad-streamlit\model_rf.joblib")
-joblib.dump(scaler, r"C:\Users\FATIMATA\usad-streamlit\scaler.joblib")
+joblib.dump(rf_model, "model_rf.joblib")
+joblib.dump(scaler, "scaler.joblib")
 features = X_train.columns.tolist()
-joblib.dump(features, r"C:\Users\FATIMATA\usad-streamlit\features.joblib")
-print("Modèle, scaler et features sauvegardés avec succès dans :")
-print("- C:\\Users\\FATIMATA\\Desktop\\M2SID\\Mémoire\\application\\model_rf.joblib")
-print("- C:\\Users\\FATIMATA\\Desktop\\M2SID\\Mémoire\\application\\scaler.joblib")
-print("- C:\\Users\\FATIMATA\\Desktop\\M2SID\\Mémoire\\application\\features.joblib")
+joblib.dump(features, "features.joblib")
+print("Modèle, scaler et features sauvegardés avec succès !")

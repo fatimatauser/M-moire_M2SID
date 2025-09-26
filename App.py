@@ -5,11 +5,11 @@ import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
-# Configuration du thème 
+# Configuration du thème pour un look moderne et professionnel
 st.set_page_config(page_title="Prédiction des Urgences Drépanocytaires - USAD", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
     <style>
@@ -19,9 +19,39 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Fonction pour charger les données 
+# Liste des variables quantitatives
+quantitative_vars = [
+    'Âge de début des signes (en mois)', 'GR (/mm3)', 'GB (/mm3)',
+    'Âge du debut d etude en mois (en janvier 2023)', 'VGM (fl/u3)',
+    'HB (g/dl)', 'Nbre de GB (/mm3)', 'PLT (/mm3)', 'Nbre de PLT (/mm3)',
+    'TCMH (g/dl)', "Nbre d'hospitalisations avant 2017",
+    "Nbre d'hospitalisations entre 2017 et 2023",
+    'Nbre de transfusion avant 2017', 'Nbre de transfusion Entre 2017 et 2023',
+    'CRP Si positive (Valeur)', "Taux d'Hb (g/dL)", "% d'Hb S", "% d'Hb F"
+]
+
+# Mappages pour l'encodage
+binary_mappings = {
+    'Pâleur': {'OUI': 1, 'NON': 0},
+    'Souffle systolique fonctionnel': {'OUI': 1, 'NON': 0},
+    'Vaccin contre méningocoque': {'OUI': 1, 'NON': 0},
+    'Splénomégalie': {'OUI': 1, 'NON': 0},
+    'Prophylaxie à la pénicilline': {'OUI': 1, 'NON': 0},
+    'Parents Salariés': {'OUI': 1, 'NON': 0},
+    'Prise en charge Hospitalisation': {'OUI': 1, 'NON': 0},
+    'Radiographie du thorax Oui ou Non': {'OUI': 1, 'NON': 0},
+    'Douleur provoquée (Os.Abdomen)': {'OUI': 1, 'NON': 0},
+    'Vaccin contre pneumocoque': {'OUI': 1, 'NON': 0},
+}
+
+ordinal_mappings = {
+    'NiveauUrgence': {'Urgence1': 1, 'Urgence2': 2, 'Urgence3': 3, 'Urgence4': 4, 'Urgence5': 5, 'Urgence6': 6},
+    "Niveau d'instruction scolarité": {'Maternelle ': 1, 'Elémentaire ': 2, 'Secondaire': 3, 'Enseignement Supérieur ': 4, 'NON': 0}
+}
+
+# Fonction pour charger et prétraiter les données
 @st.cache_data
-def load_data(uploaded_file):
+def load_and_preprocess_data(uploaded_file):
     if uploaded_file is not None:
         try:
             if uploaded_file.name.endswith('.csv'):
@@ -32,29 +62,62 @@ def load_data(uploaded_file):
                 st.error("Format de fichier non supporté. Veuillez uploader un CSV ou Excel.")
                 return None
             st.success(f"Fichier {uploaded_file.name} chargé avec succès ! ({len(df)} lignes)")
+            
+            # Sélection des variables pertinentes
+            variables_selection = [
+                'Âge de début des signes (en mois)', 'NiveauUrgence', 'GR (/mm3)', 'GB (/mm3)',
+                "Nbre d'hospitalisations avant 2017", 'CRP Si positive (Valeur)', 'Pâleur',
+                'Âge du debut d etude en mois (en janvier 2023)', 'Souffle systolique fonctionnel',
+                'VGM (fl/u3)', 'HB (g/dl)', 'Vaccin contre méningocoque', 'Nbre de GB (/mm3)',
+                "% d'Hb S", 'Âge de découverte de la drépanocytose (en mois)', 'Splénomégalie',
+                'Prophylaxie à la pénicilline', "Taux d'Hb (g/dL)", 'Parents Salariés',
+                'PLT (/mm3)', 'Diagnostic Catégorisé', 'Prise en charge Hospitalisation',
+                'Nbre de PLT (/mm3)', 'TCMH (g/dl)', 'Nbre de transfusion avant 2017',
+                'Radiographie du thorax Oui ou Non', "Niveau d'instruction scolarité",
+                "Nbre d'hospitalisations entre 2017 et 2023", "% d'Hb F",
+                'Douleur provoquée (Os.Abdomen)', 'Mois', 'Vaccin contre pneumocoque',
+                'HDJ', 'Nbre de transfusion Entre 2017 et 2023', 'Evolution'
+            ]
+            missing_cols = [col for col in variables_selection if col not in df.columns]
+            if missing_cols:
+                st.warning(f"Colonnes manquantes dans le fichier : {missing_cols}. Elles seront ajoutées avec des valeurs par défaut.")
+                for col in missing_cols:
+                    df[col] = 0 if col in binary_mappings else np.nan if col in quantitative_vars else 'NON'
+            
+            df = df[variables_selection].copy()
+            
+            # Nettoyage des variables quantitatives (gérer les virgules et espaces)
+            for var in quantitative_vars:
+                if var in df.columns:
+                    df[var] = df[var].astype(str).str.replace(' ', '').str.replace(',', '.').astype(float)
+            
+            # Encodage
+            df.replace(binary_mappings, inplace=True)
+            df.replace(ordinal_mappings, inplace=True)
+            df = pd.get_dummies(df, columns=['Diagnostic Catégorisé', 'Mois'], drop_first=True)
+            
+            # Standardisation
+            scaler = joblib.load('scaler.joblib')
+            df[quantitative_vars] = scaler.transform(df[quantitative_vars])
+            
             return df
         except Exception as e:
-            st.error(f"Erreur lors du chargement du fichier : {e}")
+            st.error(f"Erreur lors du chargement/prétraitement du fichier : {e}")
             return None
     else:
         st.info("Aucun fichier uploadé. Utilisez l'uploader ci-dessous.")
         return None
 
-# Uploader global dans la sidebar pour charger les données
-st.sidebar.title("Télécharger Vos Données")
-uploaded_file = st.sidebar.file_uploader("Uploader un fichier CSV ou Excel", type=['csv', 'xlsx', 'xls'])
+# Charger les données
+df = load_and_preprocess_data(uploaded_file)
 
-df = load_data(uploaded_file)
-
-# Chargement du modèle Random Forest 
+# Charger le modèle et les features
 try:
-    model_rf = joblib.load('model_rf.joblib')  # Remplacez par votre fichier modèle
-except:
-    st.error("Modèle non trouvé. Entraînez et sauvegardez votre Random Forest avec joblib.dump(model, 'model_rf.joblib')")
-
-# Préprocesseur 
-encoder = OneHotEncoder(handle_unknown='ignore')
-scaler = StandardScaler()
+    model_rf = joblib.load('model_rf.joblib')
+    features = joblib.load('features.joblib')
+    scaler = joblib.load('scaler.joblib')
+except Exception as e:
+    st.error(f"Erreur lors du chargement des fichiers du modèle : {e}. Assurez-vous que 'model_rf.joblib', 'scaler.joblib' et 'features.joblib' sont dans le répertoire.")
 
 # Sidebar pour navigation
 st.sidebar.title("Navigation")
@@ -64,34 +127,34 @@ if page == "Accueil":
     st.title("Application Interactive pour l'Analyse et Prédiction des Urgences Drépanocytaires")
     st.markdown("""
     Bienvenue ! Cette application, développée dans le cadre d'un mémoire sur l'USAD, permet de :
-    - Télécharger vos données (CSV/Excel) via la sidebar.
+    - Télécharger vos données (CSV/Excel) via la barre latérale.
     - Visualiser les données cliniques.
     - Segmenter les patients via clustering (K-Means).
     - Prédire l'évolution des urgences (favorable ou avec complications) via Random Forest.
     Testée pour l'USAD – Contactez-moi pour des ajustements.
     """)
-    st.image("logo_usad.png", width=200)  # Ajoutez un logo si disponible
+    # st.image("logo_usad.png", width=200)  # Commenté car le logo n'est pas disponible
 
 elif page == "Analyse Exploratoire":
     st.title("Analyse Exploratoire des Données (EDA)")
     if df is not None:
-        # Analyse univariée 
+        # Analyse univariée
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("Répartition par Sexe")
-            fig_sex = px.pie(df, names='Sexe', title='Répartition par Sexe', color_discrete_sequence=px.colors.qualitative.Pastel)
-            st.plotly_chart(fig_sex)
+            st.subheader("Répartition par Pâleur")
+            fig_paleur = px.pie(df, names='Pâleur', title='Répartition par Pâleur', color_discrete_sequence=px.colors.qualitative.Pastel)
+            st.plotly_chart(fig_paleur)
         
         with col2:
             st.subheader("Distribution des Âges")
             fig_age = px.histogram(df, x='Âge du debut d etude en mois (en janvier 2023)', title='Distribution des Âges', color_discrete_sequence=['#2196F3'])
             st.plotly_chart(fig_age)
         
-        # Analyse bivariée 
-        st.subheader("Type de Drépanocytose vs Évolution")
-        crosstab = pd.crosstab(df['Type de drépanocytose'], df['Evolution'])
+        # Analyse bivariée
+        st.subheader("Niveau d'Urgence vs Évolution")
+        crosstab = pd.crosstab(df['NiveauUrgence'], df['Evolution'])
         st.table(crosstab)
-        fig_biv = px.bar(crosstab, title='Type de Drépanocytose vs Évolution', barmode='stack')
+        fig_biv = px.bar(crosstab, title='Niveau d\'Urgence vs Évolution', barmode='stack')
         st.plotly_chart(fig_biv)
     else:
         st.warning("Veuillez uploader un fichier de données pour afficher l'analyse.")
@@ -99,13 +162,17 @@ elif page == "Analyse Exploratoire":
 elif page == "Segmentation des Patients":
     st.title("Segmentation des Patients (Clustering Non Supervisé)")
     if df is not None:
-        # Préparation des données pour clustering 
-        features_cluster = ['Âge du debut d etude en mois (en janvier 2023)', 'Taux d\'Hb (g/dL)', '% d\'Hb F', '% d\'Hb S', 'Nbre de GB (/mm3)', 'Nbre de PLT (/mm3)']  # Ajoutez vos variables
+        # Préparation des données pour clustering
+        features_cluster = [
+            'Âge du debut d etude en mois (en janvier 2023)', "Taux d'Hb (g/dL)", '% d\'Hb F', '% d\'Hb S',
+            'Nbre de GB (/mm3)', 'Nbre de PLT (/mm3)'
+        ]
         X_cluster = df[features_cluster].dropna()
         if len(X_cluster) > 0:
-            X_scaled = scaler.fit_transform(X_cluster)
+            # Utiliser le scaler chargé
+            X_scaled = scaler.transform(X_cluster)
             
-            # K-Means avec 3 clusters 
+            # K-Means avec 3 clusters
             kmeans = KMeans(n_clusters=3, random_state=42)
             clusters = kmeans.fit_predict(X_scaled)
             df_cluster = pd.DataFrame(X_scaled, columns=features_cluster)
@@ -131,63 +198,81 @@ elif page == "Segmentation des Patients":
 elif page == "Prédiction des Risques":
     st.title("Prédiction de l'Évolution des Urgences (Random Forest)")
     
-    # Inputs utilisateur pour prédiction 
+    # Inputs utilisateur pour prédiction
     st.subheader("Saisissez les Données du Patient")
-    mois = st.selectbox("Mois de Consultation", ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'])  # Ajustez selon vos données
-    hb = st.slider("Taux d'Hb (g/dL)", min_value=5.0, max_value=13.0, value=8.0)
-    gb = st.slider("Nbre de GB (/mm3)", min_value=2000, max_value=20000, value=15000)
-    plt_count = st.slider("Nbre de PLT (/mm3)", min_value=100000, max_value=900000, value=400000)
-    paleur = st.checkbox("Présence de Pâleur")
-    hospitalisation = st.checkbox("Prise en Charge Hospitalisation")
-    # Ajoutez d'autres inputs basés sur vos variables retenues (ex. : Diagnostic Catégorisé, etc.)
+    input_data = {}
+    for feature in [
+        'Âge de début des signes (en mois)', 'NiveauUrgence', 'GR (/mm3)', 'GB (/mm3)',
+        "Nbre d'hospitalisations avant 2017", 'CRP Si positive (Valeur)', 'Pâleur',
+        'Âge du debut d etude en mois (en janvier 2023)', 'Souffle systolique fonctionnel',
+        'VGM (fl/u3)', 'HB (g/dl)', 'Vaccin contre méningocoque', 'Nbre de GB (/mm3)',
+        "% d'Hb S", 'Âge de découverte de la drépanocytose (en mois)', 'Splénomégalie',
+        'Prophylaxie à la pénicilline', "Taux d'Hb (g/dL)", 'Parents Salariés',
+        'PLT (/mm3)', 'Diagnostic Catégorisé', 'Prise en charge Hospitalisation',
+        'Nbre de PLT (/mm3)', 'TCMH (g/dl)', 'Nbre de transfusion avant 2017',
+        'Radiographie du thorax Oui ou Non', "Niveau d'instruction scolarité",
+        "Nbre d'hospitalisations entre 2017 et 2023", "% d'Hb F",
+        'Douleur provoquée (Os.Abdomen)', 'Mois', 'Vaccin contre pneumocoque',
+        'HDJ', 'Nbre de transfusion Entre 2017 et 2023'
+    ]:
+        if feature in quantitative_vars:
+            input_data[feature] = st.number_input(feature, value=0.0, step=0.1)
+        elif feature in binary_mappings:
+            input_data[feature] = st.selectbox(feature, options=['OUI', 'NON'])
+        elif feature == 'NiveauUrgence':
+            input_data[feature] = st.selectbox(feature, options=['Urgence1', 'Urgence2', 'Urgence3', 'Urgence4', 'Urgence5', 'Urgence6'])
+        elif feature == "Niveau d'instruction scolarité":
+            input_data[feature] = st.selectbox(feature, options=['Maternelle ', 'Elémentaire ', 'Secondaire', 'Enseignement Supérieur ', 'NON'])
+        elif feature == 'Diagnostic Catégorisé':
+            input_data[feature] = st.selectbox(feature, options=df['Diagnostic Catégorisé'].unique() if df is not None else ['Unknown'])
+        elif feature == 'Mois':
+            input_data[feature] = st.selectbox(feature, options=['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'])
+
+    # Préparer les données pour prédiction
+    input_df = pd.DataFrame([input_data])
+    input_df.replace(binary_mappings, inplace=True)
+    input_df.replace(ordinal_mappings, inplace=True)
+    input_df = pd.get_dummies(input_df, columns=['Diagnostic Catégorisé', 'Mois'], drop_first=True)
     
-    # Préparation des inputs pour le modèle
-    input_data = pd.DataFrame({
-        'Mois': [mois],
-        'HB (g/dl)': [hb],
-        'GB (/mm3)': [gb],
-        'PLT (/mm3)': [plt_count],
-        'Pâleur': [1 if paleur else 0],
-        'Prise en charge Hospitalisation': [1 if hospitalisation else 0],
-        # Ajoutez les autres variables avec des valeurs par défaut si nécessaire
-    })
+    # Ajouter les colonnes manquantes
+    for col in features:
+        if col not in input_df.columns:
+            input_df[col] = 0
+    input_df = input_df[features]
     
-    # Prétraitement 
-    input_encoded = pd.get_dummies(input_data)  # One-Hot pour catégorielles
-    # Assurez-vous que les colonnes correspondent à celles de l'entraînement (ajoutez des colonnes manquantes à 0)
-    # Exemple : input_encoded = input_encoded.reindex(columns=model_columns, fill_value=0)
-    input_scaled = scaler.transform(input_encoded)  # Assurez-vous que scaler est fitté sur les mêmes features
+    # Standardiser les variables quantitatives
+    input_df[quantitative_vars] = scaler.transform(input_df[quantitative_vars])
     
     if st.button("Prédire l'Évolution"):
-        prediction_proba = model_rf.predict_proba(input_scaled)[0][1]  # Probabilité de complications (classe 1)
-        prediction = "Complications" if prediction_proba > 0.56 else "Favorable"  # Seuil optimal de votre mémoire
-        st.success(f"Prédiction : {prediction} (Probabilité de complications : {prediction_proba:.2f})")
+        pred_proba = model_rf.predict_proba(input_df)[:, 1]
+        pred_class = (pred_proba >= 0.56).astype(int)  # Seuil optimal
+        prediction = "Complications" if pred_class[0] == 1 else "Favorable"
+        st.success(f"Prédiction : {prediction} (Probabilité de complications : {pred_proba[0]:.2f})")
 
-    # Option pour prédire sur le dataset uploadé entier
+    # Prédiction sur l'ensemble des données uploadées
     if df is not None and st.checkbox("Prédire sur l'ensemble des données uploadées"):
-        # Prétraitez df comme pour l'entraînement (encodage, scaling)
-        features_pred = ['Mois', 'HB (g/dl)', 'GB (/mm3)', 'PLT (/mm3)', 'Pâleur', 'Prise en charge Hospitalisation']  # Ajustez
-        X_pred = df[features_pred].dropna()
-        if len(X_pred) > 0:
-            X_encoded = pd.get_dummies(X_pred)
-            X_scaled = scaler.transform(X_encoded)
-            predictions = model_rf.predict(X_scaled)
-            df['Prediction'] = predictions
-            st.subheader("Résultats des Prédictions")
-            st.dataframe(df)
-            st.download_button("Télécharger les Prédictions (CSV)", df.to_csv(index=False), file_name="predictions.csv")
-        else:
-            st.warning("Pas de données valides pour la prédiction.")
+        X_pred = df.drop(['Evolution'], axis=1, errors='ignore')
+        for col in features:
+            if col not in X_pred.columns:
+                X_pred[col] = 0
+        X_pred = X_pred[features]
+        predictions = model_rf.predict(X_pred)
+        predictions_proba = model_rf.predict_proba(X_pred)[:, 1]
+        df['Prediction'] = predictions
+        df['Probabilité Complications'] = predictions_proba
+        st.subheader("Résultats des Prédictions")
+        st.dataframe(df)
+        st.download_button("Télécharger les Prédictions (CSV)", df.to_csv(index=False), file_name="predictions.csv")
 
 elif page == "À Propos":
     st.title("À Propos")
     st.markdown("""
-    - **Développé par :** [Votre Nom] pour le mémoire sur l'USAD.
-    - **Modèle :** Random Forest (Accuracy 98.4%, AUC 99.7%).
-    - **Données :** Téléchargez votre CSV/Excel via la sidebar.
-    - **Test pour USAD :** Exécutez localement ou déployez sur Streamlit Sharing. Contactez-moi pour accès.
+    - **Développé par :** FATIMATA KANE & ISSEU GUEYE pour le mémoire sur l'USAD.
+    - **Modèle :** Random Forest .
+    - **Données :** Téléchargez votre fichier CSV/Excel via la barre latérale.
+    - **Test pour USAD :** Déployé via GitHub/Streamlit Cloud. Contactez-moi pour des ajustements.
     """)
 
-# Footer
+# Pied de page
 st.markdown("---")
-st.markdown("Application v1.1 | Date : Septembre 2025 | Pour tests USAD avec upload de données")
+st.markdown("Application v1.2 | Date : Septembre 2025 | Pour tests USAD avec téléchargement de données")

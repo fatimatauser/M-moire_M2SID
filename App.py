@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
-# Configuration du thème 
+# Configuration du thème
 st.set_page_config(page_title="USAD - Prédiction des Urgences Drépanocytaires", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
     <style>
@@ -104,7 +104,7 @@ def load_and_preprocess_data(uploaded_file):
             ]
             missing_cols = [col for col in variables_selection if col not in df.columns]
             if missing_cols:
-                st.warning(f"⚠️ Colonnes manquantes dans le fichier : {missing_cols}. Elles seront ajoutées avec des valeurs par défaut.")
+                st.warning(f" Colonnes manquantes dans le fichier : {missing_cols}. Elles seront ajoutées avec des valeurs par défaut.")
                 for col in missing_cols:
                     df[col] = 0 if col in binary_mappings else np.nan if col in quantitative_vars else 'NON'
             
@@ -126,33 +126,33 @@ def load_and_preprocess_data(uploaded_file):
             
             return df
         except Exception as e:
-            st.error(f"❌ Erreur lors du chargement/prétraitement du fichier : {e}")
+            st.error(f" Erreur lors du chargement/prétraitement du fichier : {e}")
             return None
     else:
-        st.info("ℹ️ Aucun fichier uploadé. Utilisez l'uploader dans la barre latérale.")
+        st.info("Aucun fichier chargé. Utilisez le chargement dans la barre latérale.")
         return None
 
 # Uploader global dans la barre latérale
-st.sidebar.header("📤 Télécharger Vos Données")
+st.sidebar.header(" Télécharger Vos Données")
 uploaded_file = st.sidebar.file_uploader("Choisir un fichier CSV ou Excel", type=['csv', 'xlsx', 'xls'], help="Formats supportés : CSV, XLSX, XLS")
 
 # Charger les données
 df = load_and_preprocess_data(uploaded_file)
 
-# Charger le modèle et les features
+# Charger le modèle et les variables
 try:
     model_rf = joblib.load('model_rf.joblib')
     features = joblib.load('features.joblib')
     scaler = joblib.load('scaler.joblib')
 except Exception as e:
-    st.error(f"❌ Erreur lors du chargement des fichiers du modèle : {e}. Vérifiez que 'model_rf.joblib', 'scaler.joblib' et 'features.joblib' sont dans le répertoire.")
+    st.error(f" Erreur lors du chargement des fichiers du modèle : {e}. Vérifiez que 'model_rf.joblib', 'scaler.joblib' et 'features.joblib' sont dans le répertoire.")
     st.stop()
 
 # Barre latérale pour navigation
-st.sidebar.header("🧭 Navigation")
+st.sidebar.header("Navigation")
 page = st.sidebar.radio(
     "Choisir une section",
-    ["🏠 Accueil", "📊 Analyse Exploratoire", "🗂 Segmentation des Patients", "🔍 Prédiction des Risques", "ℹ️ À Propos"],
+    ["Accueil", "Analyse Exploratoire", "Segmentation des Patients", "Prédiction des Risques", "À Propos"],
     label_visibility="collapsed"
 )
 
@@ -160,22 +160,23 @@ page = st.sidebar.radio(
 with st.container():
     st.markdown("<h1 style='text-align: center; color: #003087;'>USAD - Prédiction des Urgences Drépanocytaires</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: #666;'>Application pour l'analyse et la prédiction des crises drépanocytaires</h3>", unsafe_allow_html=True)
+    # Placeholder pour une icône de la drépanocytose (libre de droits)
+    st.image("https://www.vecteezy.com/free-vector/sickle-cell", caption="Icône Drépanocytose (Vecteezy)", width=150)
 
-if page == "🏠 Accueil":
+if page == "Accueil":
     with st.container():
-        st.header("Bienvenue à l'Application USAD 🌟")
+        st.header("Bienvenue à l'Application USAD ")
         st.markdown("""
-        Cette application, développée dans le cadre d'un mémoire sur l'**Unité de Soins Ambulatoires des enfants et adolescents Drépanocytaires (USAD)**, permet de :
-        - 📤 **Télécharger** vos données cliniques (CSV ou Excel) via la barre latérale.
-        - 📊 **Visualiser** les tendances des données avec des graphiques interactifs.
-        - 🗂 **Segmenter** les patients en groupes à l'aide du clustering (K-Means).
-        - 🔍 **Prédire** l'évolution des urgences (favorable ou avec complications) grâce à un modèle Random Forest.
-        Testée pour l'USAD Sénégal – Contactez-nous pour toute question ou ajustement.
+        Cette application, développée dans le cadre d'un mémoire de fin d'étude **, permet de :
+        - **Télécharger** vos données cliniques (CSV ou Excel) via la barre latérale.
+        - **Visualiser** les tendances des données avec des graphiques interactifs.
+        - **Segmenter** les patients en groupes à l'aide du clustering (K-Means).
+        - **Prédire** l'évolution des urgences (favorable ou avec complications) grâce à un modèle Random Forest.
         """)
-        st.info("ℹ️ Commencez par uploader un fichier dans la barre latérale pour explorer les données !")
+        st.info("Commencez par chargé un fichier dans la barre latérale pour explorer les données !")
 
-elif page == "📊 Analyse Exploratoire":
-    st.header("📊 Analyse Exploratoire des Données (EDA)")
+elif page == "Analyse Exploratoire":
+    st.header("Analyse Exploratoire des Données (EDA)")
     if df is not None:
         col1, col2 = st.columns(2)
         with col1:
@@ -194,10 +195,10 @@ elif page == "📊 Analyse Exploratoire":
         fig_biv = px.bar(crosstab, title='Niveau d\'Urgence vs Évolution', barmode='stack', color_discrete_sequence=px.colors.qualitative.Set2)
         st.plotly_chart(fig_biv, use_container_width=True)
     else:
-        st.warning("⚠️ Veuillez uploader un fichier de données pour afficher l'analyse.")
+        st.warning("Veuillez chargé un fichier de données pour afficher l'analyse.")
 
-elif page == "🗂 Segmentation des Patients":
-    st.header("🗂 Segmentation des Patients (Clustering Non Supervisé)")
+elif page == "Segmentation des Patients":
+    st.header("Segmentation des Patients (Clustering Non Supervisé)")
     if df is not None:
         features_cluster = [
             'Âge du debut d etude en mois (en janvier 2023)', "Taux d'Hb (g/dL)", '% d\'Hb F', '% d\'Hb S',
@@ -206,6 +207,7 @@ elif page == "🗂 Segmentation des Patients":
         X_cluster = df[features_cluster].dropna()
         if len(X_cluster) > 0:
             X_scaled = scaler.transform(X_cluster)
+            
             kmeans = KMeans(n_clusters=3, random_state=42)
             clusters = kmeans.fit_predict(X_scaled)
             df_cluster = pd.DataFrame(X_scaled, columns=features_cluster)
@@ -223,12 +225,12 @@ elif page == "🗂 Segmentation des Patients":
             st.subheader("Profils des Clusters")
             st.table(df_cluster.groupby('Cluster').mean())
         else:
-            st.warning("⚠️ Pas de données valides pour le clustering.")
+            st.warning(" Pas de données valides pour le clustering.")
     else:
-        st.warning("⚠️ Veuillez uploader un fichier de données pour la segmentation.")
+        st.warning(" Veuillez uploader un fichier de données pour la segmentation.")
 
-elif page == "🔍 Prédiction des Risques":
-    st.header("🔍 Prédiction de l'Évolution des Urgences (Random Forest)")
+elif page == "Prédiction des Risques":
+    st.header("Prédiction de l'Évolution des Urgences (Random Forest)")
     
     with st.form("prediction_form"):
         st.subheader("Saisissez les Données du Patient")
@@ -267,7 +269,7 @@ elif page == "🔍 Prédiction des Risques":
                 with col2:
                     input_data[feature] = st.selectbox(feature, options=['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'])
         
-        submitted = st.form_submit_button("🔍 Prédire l'Évolution")
+        submitted = st.form_submit_button("Prédire l'Évolution")
         if submitted:
             input_df = pd.DataFrame([input_data])
             input_df.replace(binary_mappings, inplace=True)
@@ -284,11 +286,11 @@ elif page == "🔍 Prédiction des Risques":
             pred_proba = model_rf.predict_proba(input_df)[:, 1]
             pred_class = (pred_proba >= 0.56).astype(int)
             prediction = "Complications" if pred_class[0] == 1 else "Favorable"
-            st.success(f"✅ Prédiction : {prediction} (Probabilité de complications : {pred_proba[0]:.2f})")
+            st.success(f"Prédiction : {prediction} (Probabilité de complications : {pred_proba[0]:.2f})")
 
     if df is not None:
-        with st.expander("Prédire sur l'ensemble des données uploadées"):
-            if st.button("📈 Lancer la prédiction globale"):
+        with st.expander("Prédire sur l'ensemble des données chargées"):
+            if st.button("Lancer la prédiction globale"):
                 X_pred = df.drop(['Evolution'], axis=1, errors='ignore')
                 for col in features:
                     if col not in X_pred.columns:
@@ -300,20 +302,21 @@ elif page == "🔍 Prédiction des Risques":
                 df['Probabilité Complications'] = predictions_proba
                 st.subheader("Résultats des Prédictions")
                 st.dataframe(df)
-                st.download_button("📥 Télécharger les Prédictions (CSV)", df.to_csv(index=False), file_name="predictions.csv")
+                st.download_button("Télécharger les Prédictions (CSV)", df.to_csv(index=False), file_name="predictions.csv")
 
-elif page == "ℹ️ À Propos":
-    st.header("ℹ️ À Propos")
+elif page == "À Propos":
+    st.header("À Propos")
     with st.container():
         st.markdown("""
-        **Développé par :** FATIMATA KANE & ISSEU GUEYE pour le mémoire de M2SID.  
+        **Développé par :** FATIMATA KANE & ISSEU GUEYE pour le mémoire sur l'USAD.  
         **Objectif :** Fournir un outil interactif pour l'analyse et la prédiction des urgences drépanocytaires.  
-        **Modèle :** Random Forest.  
+        **Modèle :** Random Forest (Précision 98.4%, AUC 99.7%).  
         **Données :** Téléchargez votre fichier CSV/Excel via la barre latérale.  
-        **Test pour USAD :** Déployé via GitHub/Streamlit Cloud.   
-        **Version :** 1.2 | **Date :** Septembre 2025
+        **Test pour USAD :** Déployé via GitHub/Streamlit Cloud.  
+        **Version :** 1.1 | **Date :** Septembre 2025
         """)
+        st.info("📧 Pour toute question, contactez nous
 
 # Pied de page
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: #666;'>Application USAD v1.2 | Septembre 2025 | Développée pour l'USAD Sénégal</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #666;'>Application USAD v1.2 | Septembre 2025 </p>", unsafe_allow_html=True)

@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
-# Configuration du thème pour un look moderne et professionnel
+# Configuration du thème 
 st.set_page_config(page_title="Prédiction des Urgences Drépanocytaires - USAD", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
     <style>

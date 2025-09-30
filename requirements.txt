@@ -1,0 +1,12 @@
+streamlit==1.49.1
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+imblearn
+lightgbm
+joblib
+openpyxl
+plotly
+
